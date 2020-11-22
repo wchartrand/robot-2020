@@ -61,14 +61,18 @@ class Robot:
 
     def drive_in_direction(self, direction, distance, speed):
         self.reset_distance_travelled()
-        while self.distance_travelled() < distance:
+        while True:
+            if distance < 0 and self.distance_travelled() < distance:
+                break
+            if distance > 0 and self.distance_travelled() > distance:
+                break
             T = self.motion_sensor.get_yaw_angle() - direction
             T = T % 360
             if T < 180:
                 steering = 0 - T
             else:
                 steering = 360 - T
-            self.wheels.start(steering=steering, speed=speed)
+            self.wheels.start(steering=steering * 2, speed=speed)
         self.wheels.stop()
 
     def drop_block(self):
@@ -82,7 +86,7 @@ class Robot:
         if degrees > 300:
             degrees = 300
         current = self.arm.get_position()
-        if degrees > current:
+        if degrees > current or current > 350:
             direction = "clockwise"
         else:
             direction = "counterclockwise"
@@ -92,13 +96,20 @@ class Robot:
 def test():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
-    robot.drive_in_direction(0, 100, 10)
+    # robot.drive_in_direction(0, 100, 10)
+    robot.set_arm_height(0)
 
 
 def run_one():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
+    # robot.drive_in_direction( 0, 20, 20)
+    robot.set_arm_height(300)
+    # robot.drive_in_direction( 0, 68, 20)
+    robot.drive_in_direction(0, 22, 3)
+
+    robot.drive_in_direction(0, -5, -5)
 
 
-test()
-# run_one()
+# test()
+run_one()
