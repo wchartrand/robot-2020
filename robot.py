@@ -66,12 +66,13 @@ class Robot:
                 break
             if distance > 0 and self.distance_travelled() > distance:
                 break
-            T = self.motion_sensor.get_yaw_angle() - direction
+            T = self.motion_sensor.get_yaw_angle()%360 - direction
             T = T % 360
             if T < 180:
                 steering = 0 - T
             else:
                 steering = 360 - T
+            if speed < 0: steering = -1*steering
             self.wheels.start(steering=steering * 2, speed=speed)
         self.wheels.stop()
 
@@ -110,7 +111,44 @@ def run_one():
 
     robot.drive_in_direction(0, -5, -5)
 
+def run_two():
+    robot = Robot()
+    robot.motion_sensor.reset_yaw_angle()
+    robot.set_arm_height(60)
+    robot.drive_in_direction(0, 32, 30)
+    robot.turn_to_direction(15)
+    robot.drive_in_direction(15, 4, 30)
+    robot.set_arm_height(93)
+    robot.turn_to_direction(90)
+    robot.set_arm_height(300)
+    robot.drive_in_direction(90, 55, 30)
+    robot.turn_to_direction(120)
+    robot.drive_in_direction(120, -26, -30)
+    robot.turn_to_direction(105)
+    robot.drive_in_direction(105, -21, -30)
+    robot.set_arm_height(0)
+    robot.drop_block()
+    robot.drive_in_direction(105, 5.5, 30)
+    robot.drop_block()
+    robot.drive_in_direction(105, 4.5, 30)
+    robot.drop_block()
+    robot.drive_in_direction(105, 6.5, 30)
+    robot.drop_block()
+    robot.drive_in_direction(105, 15, 30)
+    robot.turn_to_direction(180)
+    robot.drive_in_direction(180, -20, -30)
+    robot.turn_to_direction(135)
+    robot.set_arm_height(300)
+    robot.drive_in_direction(135, -15, -30)
+    robot.drop_block()
+    robot.drive_in_direction(135, 10, 30)
+    robot.turn_to_direction(315)
+    robot.set_arm_height(23)
+    robot.drive_in_direction(315, 3.7, 30)
+    robot.set_arm_height(300)
 
 # test()
-run_one()
+# run_one()
+run_two()
+
 
