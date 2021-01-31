@@ -60,7 +60,7 @@ class PID(object):
         output_limits=(None, None),
         auto_mode=True,
         proportional_on_measurement=False,
-        error_map=None,
+        error_map=None
     ):
         """
         Initialize a new PID controller.
@@ -120,21 +120,15 @@ class PID(object):
         if dt is None:
             dt = now - self._last_time if now - self._last_time else 1e-16
         elif dt <= 0:
-            raise ValueError("dt has negative value {}, must be positive".format(dt))
+            raise ValueError('dt has negative value {}, must be positive'.format(dt))
 
-        if (
-            self.sample_time is not None
-            and dt < self.sample_time
-            and self._last_output is not None
-        ):
+        if self.sample_time is not None and dt < self.sample_time and self._last_output is not None:
             # only update every sample_time seconds
             return self._last_output
 
         # compute error terms
         error = self.setpoint - input_
-        d_input = input_ - (
-            self._last_input if self._last_input is not None else input_
-        )
+        d_input = input_ - (self._last_input if self._last_input is not None else input_)
 
         # check if must map the error
         if self.error_map is not None:
@@ -150,9 +144,7 @@ class PID(object):
 
         # compute integral and derivative terms
         self._integral += self.Ki * error * dt
-        self._integral = _clamp(
-            self._integral, self.output_limits
-        )  # avoid integral windup
+        self._integral = _clamp(self._integral, self.output_limits)# avoid integral windup
 
         self._derivative = -self.Kd * d_input / dt
 
@@ -169,13 +161,13 @@ class PID(object):
 
     def __repr__(self):
         return (
-            "{self.__class__.__name__}("
-            "Kp={self.Kp!r}, Ki={self.Ki!r}, Kd={self.Kd!r}, "
-            "setpoint={self.setpoint!r}, sample_time={self.sample_time!r}, "
-            "output_limits={self.output_limits!r}, auto_mode={self.auto_mode!r}, "
-            "proportional_on_measurement={self.proportional_on_measurement!r},"
-            "error_map={self.error_map!r}"
-            ")"
+            '{self.__class__.__name__}('
+            'Kp={self.Kp!r}, Ki={self.Ki!r}, Kd={self.Kd!r}, '
+            'setpoint={self.setpoint!r}, sample_time={self.sample_time!r}, '
+            'output_limits={self.output_limits!r}, auto_mode={self.auto_mode!r}, '
+            'proportional_on_measurement={self.proportional_on_measurement!r},'
+            'error_map={self.error_map!r}'
+            ')'
         ).format(self=self)
 
     @property
@@ -245,7 +237,7 @@ class PID(object):
         min_output, max_output = limits
 
         if None not in limits and max_output < min_output:
-            raise ValueError("lower limit must be less than upper limit")
+            raise ValueError('lower limit must be less than upper limit')
 
         self._min_output = min_output
         self._max_output = max_output
@@ -269,7 +261,6 @@ class PID(object):
         self._last_output = None
         self._last_input = None
 
-
 # Simple PID Code ends here.
 # Beyond this point, the code is not MIT Licenced.
 
@@ -280,7 +271,7 @@ class Robot:
         self.wheels = MotorPair("D", "C")
         self.left_wheel = Motor("D")
         self.right_wheel = Motor("C")
-        # self.lift = Motor("E")
+        self.lift = Motor("E")
 
         self.left_color_sensor = ColorSensor("B")
         self.right_color_sensor = ColorSensor("A")
@@ -306,17 +297,17 @@ class Robot:
             self.wheels.start(steering=fred, speed=speed)
         self.wheels.stop()
 
-    def pid_follow_line(self, distance, speed, color_sensor=None):
+    def pid_follow_line(self, distance, speed, color_sensor =None):
         if color_sensor is None:
-            color_sensor = self.left_color_sensor
+            color_sensor =  self.left_color_sensor 
         self.reset_distance_travelled()
-        pid = PID(0.7, 0, 0, setpoint=0, sample_time=None)
+        pid = PID(0.7,0,0, setpoint=0, sample_time=None)
         while self.distance_travelled() < distance:
-            fred = color_sensor.get_reflected_light() - 50
+            fred =  color_sensor.get_reflected_light()-50
             steering = pid(fred)
             adjusted_speed = speed
             if abs(steering) > 30:
-                adjusted_speed = round(speed / 2)
+                adjusted_speed = round(speed/2)
             print("steering={}, speed={}".format(steering, adjusted_speed))
             self.wheels.start(steering=round(steering), speed=adjusted_speed)
 
@@ -355,17 +346,17 @@ class Robot:
             l = self.left_color_sensor.get_reflected_light()
             r = self.right_color_sensor.get_reflected_light()
             diff = l - r
-            steer = round(diff * 1.3)
+            steer = round(diff*1.3)
             print("left = {}, right = {}, steer = {}".format(l, r, steer))
             if steer > 1 or steer < -1:
                 steer = 30 if steer > 30 else steer
                 steer = -30 if steer < -30 else steer
             self.wheels.start(steering=steer, speed=speed)
 
-            # if steer < 80 and steer > -80:
-            #     self.wheels.start(steering=steer, speed=speed)
-            # else:
-            #     self.wheels.start(steering=steer, speed=int(speed / 2))
+                # if steer < 80 and steer > -80:
+                #     self.wheels.start(steering=steer, speed=speed)
+                # else:
+                #     self.wheels.start(steering=steer, speed=int(speed / 2))
         else:
             self.wheels.start(steering=0, speed=speed)
         self.wheels.stop()
@@ -374,11 +365,11 @@ class Robot:
 def test():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
-    speed = 30
+    speed=30
 
     robot.turn_to_direction(10)
     robot.drive_in_direction(10, 54, speed)
-    robot.drive_in_direction(10, -15, -1 * speed)
+    robot.drive_in_direction(10, -15, -1*speed)
     robot.turn_to_direction(-20)
     robot.drive_in_direction(-20, 45, speed)
     robot.turn_to_direction(40)
@@ -387,13 +378,13 @@ def test():
     robot.drive_in_direction(130, 33, speed)
     robot.wheels.move(8, steering=-40, speed=speed)
     robot.wheels.start(steering=-40, speed=speed)
-    while robot.right_color_sensor.get_color() != "black":
+    while robot.right_color_sensor.get_color() != 'black':
         pass
     robot.wheels.move(1, steering=-40, speed=speed)
     robot.follow_line_with_two_sensors(40, speed)
     robot.turn_to_direction(310)
     robot.turn_to_direction(225)
-    robot.drive_in_direction(225, -32, -1 * speed)
+    robot.drive_in_direction(225, -32, -1*speed)
     robot.left_wheel.run_for_rotations(3, speed=50)
     robot.drive_in_direction(220, 5, 30)
     robot.turn_to_direction(190)
@@ -405,21 +396,83 @@ def test():
     robot.turn_to_direction(0)
     robot.drive_in_direction(0, 15, 30)
     robot.turn_to_direction(250)
-    robot.drive_in_direction(250, 15, 30)
+    robot.drive_in_direction(250,15, 30)
     robot.follow_line_with_two_sensors(52, speed)
     robot.turn_to_direction(270)
-    robot.drive_in_direction(270, 25, speed)
+    robot.drive_in_direction(270,25, speed)
     robot.turn_to_direction(220)
     robot.drive_in_direction(220, 70, speed)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def test2():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
-    speed = 30
+    speed=30
 
-    # robot.pid_follow_line(200, speed)
-    robot.wheels.start(-20, -15)
+    robot.lift.run_for_rotations(-1, speed=100)
+
+    robot.drive_in_direction(0, 50, speed)
+    robot.turn_to_direction(-40)
+    robot.drive_in_direction(-40, 40, speed)
+    robot.turn_to_direction(-85)
+    robot.drive_in_direction(-85, -5, -1*speed)
+    robot.lift.run_for_rotations(1, speed=100)
+    robot.drive_in_direction(-85, 12, speed)
+    robot.drive_in_direction(-85, -1, -1*speed)
+
+
+    robot.lift.run_for_rotations(-4.1, speed=100)
+    robot.lift.run_for_rotations(0.7, speed=100)
+
+    robot.drive_in_direction(-85, -6, -1*speed)
+
+    robot.lift.run_for_rotations(2, speed=100)
+    robot.turn_to_direction(-30)
+    robot.drive_in_direction(-30, 3, speed)
+    robot.lift.run_for_rotations(-2, speed=100)
+
+
+
+    robot.turn_to_direction(65)
+    robot.lift.run_for_rotations(3, speed=100)
+    robot.wheels.start(steering=0, speed=speed)
+    while robot.right_color_sensor.get_color() != 'black':
+        pass
+    robot.turn_to_direction(40)
+    robot.drive_in_direction(40, 15, speed)
+    robot.wheels.start(steering=0, speed=speed)
+    while robot.right_color_sensor.get_color() != 'black':
+        pass
+    robot.wheels.stop()
+    robot.turn_to_direction(15)
+    robot.drive_in_direction(15, 10, speed)
+    robot.lift.run_for_rotations(-0.5, speed=100)
+
+
+
+
+    # robot.drive_in_direction(0, 10, speed)
+    # robot.lift.run_for_rotations(-0.5, speed=100)
+    # robot.drive_in_direction(60, -10, -1*speed)
+
+
+
+
+
+
 
 
 test2()
+
