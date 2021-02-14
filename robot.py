@@ -19,12 +19,13 @@ import random
 
 
 class Robot:
-    def __init__(self):
+    def __init__(self, use_lift=True):
         self.hub = PrimeHub()
         self.wheels = MotorPair("D", "C")
         self.left_wheel = Motor("D")
         self.right_wheel = Motor("C")
-        # self.lift = Motor("E")
+        if use_lift:
+            self.lift = Motor("E")
 
         self.left_color_sensor = ColorSensor("B")
         self.right_color_sensor = ColorSensor("A")
@@ -50,14 +51,29 @@ class Robot:
             self.wheels.start(steering=fred, speed=speed)
         self.wheels.stop()
 
-    def pid_follow_line(self, distance, speed, color_sensor=None):
+    def follow_line_with_two_sensors(self, distance, speed):
+        self.reset_distance_travelled()
+        while self.distance_travelled() < distance:
+            l = self.left_color_sensor.get_reflected_light()
+            r = self.right_color_sensor.get_reflected_light()
+            diff = l - r
+            steer = round(diff * 1.3)
+            print("left = {}, right = {}, steer = {}".format(l, r, steer))
+            if steer > 1 or steer < -1:
+                steer = 30 if steer > 30 else steer
+                steer = -30 if steer < -30 else steer
+            self.wheels.start(steering=steer, speed=speed)
+        else:
+            self.wheels.start(steering=0, speed=speed)
+        self.wheels.stop()
+
+    def pid_follow_line_two_sensors(self, distance, speed):
         self.reset_distance_travelled()
 
         CS_L = self.left_color_sensor
         CS_R = self.right_color_sensor
         motor_p = self.wheels
 
-        print("start")
         speed = 30
         d = 100
         i = 0.0025
@@ -80,7 +96,7 @@ class Robot:
             elif steer < -100:
                 steer = -100
 
-            print(Col_L, " ", Col_R, " ", pid_p, " ", pid_i, " ", pid_d, " ", steer)
+            # print(Col_L, " ", Col_R, " ", pid_p, " ", pid_i, " ", pid_d, " ", steer)
             if steer < 40 and steer > -40:
                 motor_p.start(steering=steer, speed=speed)
             elif steer < 60 and steer > -60:
@@ -95,7 +111,7 @@ class Robot:
             else:
                 self.hub.light_matrix.show_image("ARROW_E")
             dif_p = dif
-            wait_for_seconds(0.025)
+            # wait_for_seconds(0.025)
 
         motor_p.stop()
 
@@ -128,30 +144,116 @@ class Robot:
             self.wheels.start(steering=steering * 3, speed=speed)
         self.wheels.stop()
 
-    def follow_line_with_two_sensors(self, distance, speed):
-        self.reset_distance_travelled()
-        while self.distance_travelled() < distance:
-            l = self.left_color_sensor.get_reflected_light()
-            r = self.right_color_sensor.get_reflected_light()
-            diff = l - r
-            steer = round(diff * 1.3)
-            print("left = {}, right = {}, steer = {}".format(l, r, steer))
-            if steer > 1 or steer < -1:
-                steer = 30 if steer > 30 else steer
-                steer = -30 if steer < -30 else steer
-            self.wheels.start(steering=steer, speed=speed)
+    def pid_turn_to_direction(self, degree):
+        if degree > 180:
+            degree = -360 + degree
+        elif degree < -180:
+            degree = 360 + degree
+        d = 150
+        t = 25
+        pid_i = 0
+        dif_p = 0
 
-            # if steer < 80 and steer > -80:
-            #     self.wheels.start(steering=steer, speed=speed)
-            # else:
-            #     self.wheels.start(steering=steer, speed=int(speed / 2))
-        else:
-            self.wheels.start(steering=0, speed=speed)
+        i = 0.075
+        turn = 32
+        yaw_angle = self.motion_sensor.get_yaw_angle()
+        while 1 != turn and 0 != turn and -1 != turn:
+            yaw_angle = self.motion_sensor.get_yaw_angle()
+            if yaw_angle >= 0:
+                if degree < 0:
+                    turn = yaw_angle + (degree * -1)
+                    if turn < 180:
+                        turn = turn * -1
+                    else:
+                        turn = 360 - turn
+                else:
+                    turn = degree - yaw_angle
+            else:
+                if degree > 0:
+                    turn = yaw_angle + (degree * -1)
+                    if turn > -180:
+                        turn = turn * -1
+                    else:
+                        turn = -360 - turn
+                else:
+                    turn = degree - yaw_angle
+
+            pid_i = i * (pid_i + (turn * t))
+            pid_d = ((turn - dif_p) / t) * d
+            # print(turn, pid_i,pid_d)
+
+            turn_ = turn + pid_i + pid_d
+            if turn_ > 100:
+                turn_ = 100
+            elif turn_ < -100:
+                turn_ = -100
+
+            self.wheels.start(steering=100, speed=round(turn_ / 3))
+            wait_for_seconds(0.025)
+            dif_p = turn
+
         self.wheels.stop()
+
+    def pid_drive_in_direction(self, direction, distance, speed):
+        pid_turn_to_direction(degree)
+        self.reset_distance_travelled()
+
+        if degree > 180:
+            degree = -360 + degree
+        elif degree < -180:
+            degree = 360 + degree
+        d = 150
+        t = 25
+        pid_i = 0
+        dif_p = 0
+
+        i = 0.075
+        turn = 32
+        yaw_angle = self.motion_sensor.get_yaw_angle()
+        while True:
+            if distance < 0 and self.distance_travelled() < distance:
+                break
+            if distance > 0 and self.distance_travelled() > distance:
+                break
+            yaw_angle = hub.motion_sensor.get_yaw_angle()
+            if yaw_angle >= 0:
+                if degree < 0:
+                    turn = yaw_angle + (degree * -1)
+                    if turn < 180:
+                        turn = turn * -1
+                    else:
+                        turn = 360 - turn
+                else:
+                    turn = degree - yaw_angle
+            else:
+                if degree > 0:
+                    turn = yaw_angle + (degree * -1)
+                    if turn > -180:
+                        turn = turn * -1
+                    else:
+                        turn = -360 - turn
+                else:
+                    turn = degree - yaw_angle
+
+            pid_i = i * (pid_i + (turn * t))
+            pid_d = ((turn - dif_p) / t) * d
+            # print(turn, pid_i,pid_d)
+
+            turn_ = turn + pid_i + pid_d
+            if turn_ > 100:
+                turn_ = 100
+            elif turn_ < -100:
+                turn_ = -100
+
+            self.wheels.start(steering=round(turn_ / 4), speed=speed)
+            # wait_for_seconds(0.025)
+            dif_p = turn
+
+        motor_p.stop()
 
 
 def test1():
-    robot = Robot()
+    robot = Robot(use_lift=False)
     robot.motion_sensor.reset_yaw_angle()
     speed = 40
 
@@ -170,7 +272,7 @@ def test1():
     #     pass
     # robot.wheels.move(1.8, steering=-55, speed=speed)
     # robot.drive_in_direction(65, 5, speed)
-    # robot.pid_follow_line(33, speed)
+    # robot.pid_follow_line_two_sensors(33, speed)
 
     # robot.turn_to_direction(70)
     # robot.drive_in_direction(70, 35, speed)
@@ -181,20 +283,20 @@ def test1():
     robot.drive_in_direction(-140, -23, -1 * speed)
 
     robot.left_wheel.run_for_rotations(3, speed=50)
-    robot.drive_in_direction(220, 5, 30)
+    robot.drive_in_direction(220, 5, speed)
     robot.turn_to_direction(190)
-    robot.drive_in_direction(190, 12, 30)
+    robot.drive_in_direction(190, 12, speed)
     robot.turn_to_direction(225)
-    robot.drive_in_direction(225, 5, 30)
+    robot.drive_in_direction(225, 5, speed)
     robot.turn_to_direction(310)
     robot.drive_in_direction(310, 32, speed)
     robot.turn_to_direction(0)
-    robot.drive_in_direction(0, 15, 30)
-    robot.wheels.move(10, steering=-60, speed=30)
+    robot.drive_in_direction(0, 15, speed)
+    robot.wheels.move(10, steering=-60, speed=speed)
     return
     robot.turn_to_direction(250)
-    robot.drive_in_direction(250, 15, 30)
-    robot.pid_follow_line(52, speed)
+    robot.drive_in_direction(250, 15, speed)
+    robot.pid_follow_line_two_sensors(52, speed)
     robot.turn_to_direction(270)
     robot.drive_in_direction(270, 25, speed)
     robot.turn_to_direction(220)
@@ -248,7 +350,6 @@ def test2():
     robot.turn_to_direction(40)
     robot.drive_in_direction(40, 45, speed)
     robot.wheels.start(steering=0, speed=speed)
-    # while robot.right_color_sensor.get_color() != "black":
     while robot.left_color_sensor.get_reflected_light() > 20:
         pass
     robot.wheels.stop()
