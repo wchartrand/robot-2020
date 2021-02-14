@@ -126,24 +126,6 @@ class Robot:
             self.wheels.start(steering=steering, speed=10)
         self.wheels.stop()
 
-    def drive_in_direction(self, direction, distance, speed):
-        self.reset_distance_travelled()
-        while True:
-            if distance < 0 and self.distance_travelled() < distance:
-                break
-            if distance > 0 and self.distance_travelled() > distance:
-                break
-            T = self.motion_sensor.get_yaw_angle() % 360 - direction
-            T = T % 360
-            if T < 180:
-                steering = 0 - T
-            else:
-                steering = 360 - T
-            if speed < 0:
-                steering = -1 * steering
-            self.wheels.start(steering=steering * 3, speed=speed)
-        self.wheels.stop()
-
     def pid_turn_to_direction(self, degree):
         if degree > 180:
             degree = -360 + degree
@@ -191,11 +173,28 @@ class Robot:
             self.wheels.start(steering=100, speed=round(turn_ / 3))
             wait_for_seconds(0.025)
             dif_p = turn
+        self.wheels.stop()
 
+    def drive_in_direction(self, direction, distance, speed):
+        self.reset_distance_travelled()
+        while True:
+            if distance < 0 and self.distance_travelled() < distance:
+                break
+            if distance > 0 and self.distance_travelled() > distance:
+                break
+            T = self.motion_sensor.get_yaw_angle() % 360 - direction
+            T = T % 360
+            if T < 180:
+                steering = 0 - T
+            else:
+                steering = 360 - T
+            if speed < 0:
+                steering = -1 * steering
+            self.wheels.start(steering=steering * 3, speed=speed)
         self.wheels.stop()
 
     def pid_drive_in_direction(self, direction, distance, speed):
-        pid_turn_to_direction(degree)
+        self.pid_turn_to_direction(degree)
         self.reset_distance_travelled()
 
         if degree > 180:
@@ -215,7 +214,7 @@ class Robot:
                 break
             if distance > 0 and self.distance_travelled() > distance:
                 break
-            yaw_angle = hub.motion_sensor.get_yaw_angle()
+            yaw_angle = self.motion_sensor.get_yaw_angle()
             if yaw_angle >= 0:
                 if degree < 0:
                     turn = yaw_angle + (degree * -1)
