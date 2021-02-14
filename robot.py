@@ -18,6 +18,37 @@ from math import pi
 import random
 
 
+class SpeedManager:
+    def __init__(self, wheels, distance, min_speed=30, max_speed=100, ramp_distance=20):
+        self.wheels = wheels
+        self.distance = distance
+        self.min_speed = min_speed
+        self.max_speed = max_speed
+        self.ramp_distance = ramp_distance
+
+    def reset_distance_travelled(self):
+        self.left_wheel.set_degrees_counted(degrees_counted=0)
+        self.right_wheel.set_degrees_counted(degrees_counted=0)
+
+    def distance_travelled(self):
+        Turning = self.left_wheel.get_degrees_counted()
+        Cards = self.right_wheel.get_degrees_counted()
+        average = (-1 * Turning + Cards) / 2 / 360
+        distance = average * 9 * pi
+        return distance
+
+    def speed(self):
+        distance_travelled = distance_travelled()
+        distance_from_start = abs(distance_travelled)
+        distance_from_end = abs(self.distance - distance_travelled)
+        min_distance = min(distance_from_start, distance_from_end)
+        if min_distance > self.ramp_distance:
+            return max_speed
+        else:
+            fraction_of_the_way_up_the_ramp = min_distance / self.ramp_distance
+            return round(max_speed * fraction_of_the_way_up_the_ramp)
+
+
 class Robot:
     def __init__(self, use_lift=True):
         self.hub = PrimeHub()
@@ -58,7 +89,7 @@ class Robot:
             r = self.right_color_sensor.get_reflected_light()
             diff = l - r
             steer = round(diff * 1.3)
-            print("left = {}, right = {}, steer = {}".format(l, r, steer))
+            # print("left = {}, right = {}, steer = {}".format(l, r, steer))
             if steer > 1 or steer < -1:
                 steer = 30 if steer > 30 else steer
                 steer = -30 if steer < -30 else steer
@@ -111,7 +142,7 @@ class Robot:
             else:
                 self.hub.light_matrix.show_image("ARROW_E")
             dif_p = dif
-            # wait_for_seconds(0.025)
+            wait_for_seconds(0.025)
 
         motor_p.stop()
 
@@ -193,6 +224,24 @@ class Robot:
             self.wheels.start(steering=steering * 3, speed=speed)
         self.wheels.stop()
 
+    def drive_in_direction_with_acceleration(self, direction, distance):
+        speed_manager = SpeedManager(self.wheels, distance)
+        while True:
+            if distance < 0 and self.distance_travelled() < distance:
+                break
+            if distance > 0 and self.distance_travelled() > distance:
+                break
+            T = self.motion_sensor.get_yaw_angle() % 360 - direction
+            T = T % 360
+            if T < 180:
+                steering = 0 - T
+            else:
+                steering = 360 - T
+            if distance < 0:
+                steering = -1 * steering
+            self.wheels.start(steering=steering * 3, speed=speed_manager.speed())
+        self.wheels.stop()
+
     def pid_drive_in_direction(self, direction, distance, speed):
         self.pid_turn_to_direction(degree)
         self.reset_distance_travelled()
@@ -245,7 +294,7 @@ class Robot:
                 turn_ = -100
 
             self.wheels.start(steering=round(turn_ / 4), speed=speed)
-            # wait_for_seconds(0.025)
+            wait_for_seconds(0.025)
             dif_p = turn
 
         motor_p.stop()
@@ -265,16 +314,6 @@ def test1():
     robot.drive_in_direction(40, 45, speed)
     robot.turn_to_direction(130)
     robot.drive_in_direction(130, 44, speed)
-    # robot.wheels.move(8, steering=-40, speed=speed)
-    # robot.wheels.start(steering=-40, speed=speed)
-    # while robot.right_color_sensor.get_color() != "black":
-    #     pass
-    # robot.wheels.move(1.8, steering=-55, speed=speed)
-    # robot.drive_in_direction(65, 5, speed)
-    # robot.pid_follow_line_two_sensors(33, speed)
-
-    # robot.turn_to_direction(70)
-    # robot.drive_in_direction(70, 35, speed)
 
     robot.turn_to_direction(-128)
     robot.drive_in_direction(-128, -56, -1 * speed)
