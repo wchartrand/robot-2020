@@ -460,6 +460,7 @@ def run1():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    # Basketball
     robot.lift.run_for_rotations(-1, speed=100)
 
     robot.drive_in_direction(0, 63, speed)
@@ -475,6 +476,7 @@ def run1():
 
     robot.drive_in_direction(-85, -8, -1 * speed)
 
+    # Bocce part 1
     robot.lift.run_for_rotations(2, speed=100)
     robot.turn_to_direction(-35)
     robot.drive_in_direction(-35, 3, speed)
@@ -483,6 +485,7 @@ def run1():
     robot.turn_to_direction(65)
     robot.lift.run_for_rotations(3, speed=100)
 
+    # Bocce 2
     robot.wheels.start(steering=0, speed=speed)
     while robot.right_color_sensor.get_color() != "black":
         pass
@@ -497,6 +500,7 @@ def run1():
     robot.lift.run_for_rotations(-0.5, speed=30)
     robot.drive_in_direction(25, -12, -1 * speed)
 
+    # Weight machine
     robot.lift.run_for_rotations(-2, speed=100)
     robot.turn_to_direction(38)
     robot.drive_in_direction(38, 45, speed)
@@ -510,6 +514,7 @@ def run1():
     robot.drive_in_direction(-40, 1, speed)
     robot.lift.run_for_rotations(2.5, speed=100)
 
+    # Rowing machine
     robot.turn_to_direction(-60)
     robot.drive_in_direction(-60, -10, -30)
     robot.turn_to_direction(110)
@@ -517,6 +522,8 @@ def run1():
     robot.drive_in_direction(110, 11, 30)
     robot.turn_to_direction(155)
     robot.drive_in_direction(155, -10, -30)
+
+    # Return home
     robot.turn_to_direction(223)
     robot.drive_in_direction(223, 215, 30)
 
@@ -526,6 +533,7 @@ def run2():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    # Bocce part 3
     robot.drive_in_direction(0, 10, speed=50)
     robot.turn_to_direction(-15)
     robot.drive_in_direction(-15, 70, speed=50)
@@ -535,6 +543,8 @@ def run2():
     robot.drive_in_direction(16, -2, speed=-50)
     robot.turn_to_direction(-30)
     robot.drive_in_direction(-30, -29, speed=-30)
+
+    # Slide
     robot.turn_to_direction(0)
     robot.wheels.move(20, steering=-20, speed=-40)
     robot.turn_to_direction(10)
@@ -546,6 +556,7 @@ def run3():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    # Bench
     robot.drive_in_direction(0, 25, speed)
     robot.turn_to_direction(10)
     robot.drive_in_direction(10, 12, speed)
@@ -559,7 +570,10 @@ def run4():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    # Step counter
     robot.drive_in_direction(0, 110, speed)
+
+    # Pull up bar
     robot.drive_in_direction(0, -10, -1 * speed)
     robot.turn_to_direction(-45)
     robot.drive_in_direction(-45, 10, speed)
