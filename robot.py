@@ -318,6 +318,7 @@ class Robot:
         self, degree, distance, speed, accelerate=True, stop_when_done=True
     ):
         speed_manager = None
+        accelerate = accelerate and distance > 22
         if accelerate:
             speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
         else:
