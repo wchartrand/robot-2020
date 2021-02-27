@@ -26,14 +26,18 @@ class SpeedManager:
         distance,
         min_speed=20,
         max_speed=100,
-        ramp_distance=30,
+        start_ramp_distance=10,
+        stop_ramp_distance=20,
+        stop_plateau_distance=10,
     ):
         self.left_wheel = left_wheel
         self.right_wheel = right_wheel
-        self.distance = abs(distance)
+        self.distance = abs(distance) - stop_plateau_distance
         self.min_speed = min_speed
         self.max_speed = max_speed
-        self.ramp_distance = ramp_distance
+        self.start_ramp_distance = start_ramp_distance
+        self.stop_ramp_distance = stop_ramp_distance
+        self.stop_plateau_distance = stop_plateau_distance
         self.reset_distance_travelled()
 
     def reset_distance_travelled(self):
@@ -52,14 +56,28 @@ class SpeedManager:
         if distance_travelled > self.distance:
             return self.min_speed
         distance_from_start = abs(distance_travelled)
-        distance_from_end = abs(self.distance - distance_travelled)
-        min_distance = min(distance_from_start, distance_from_end)
-        speed = self.max_speed
-        if min_distance < self.ramp_distance:
-            fraction_of_the_way_up_the_ramp = min_distance / self.ramp_distance
-            speed = self.min_speed + round(
-                (self.max_speed - self.min_speed) * fraction_of_the_way_up_the_ramp
+        max_speed_from_start = (
+            self.max_speed
+            if distance_from_start > self.start_ramp_distance
+            else self.min_speed
+            + round(
+                (self.max_speed - self.min_speed)
+                * (distance_from_start / self.start_ramp_distance)
             )
+        )
+
+        distance_from_end = abs(self.distance - distance_travelled)
+        max_speed_from_end = (
+            self.max_speed
+            if distance_from_end > self.stop_ramp_distance
+            else self.min_speed
+            + round(
+                (self.max_speed - self.min_speed)
+                * (distance_from_end / self.stop_ramp_distance)
+            )
+        )
+
+        speed = min(max_speed_from_start, max_speed_from_end)
         print("speed={}".format(speed))
         return speed
 
@@ -224,8 +242,8 @@ class Robot:
         self.wheels.stop()
 
     def drive_in_direction(self, direction, distance, speed):
-        # self.pid_drive_in_direction(direction, distance, speed)
-        self.drive_in_direction_with_acceleration(direction, distance)
+        self.pid_drive_in_direction(direction, distance, speed)
+        # self.drive_in_direction_with_acceleration(direction, distance)
         return
         self.reset_distance_travelled()
         while True:
@@ -268,7 +286,8 @@ class Robot:
 
     def pid_drive_in_direction(self, degree, distance, speed):
         # self.pid_turn_to_direction(degree)
-        self.reset_distance_travelled()
+        # self.reset_distance_travelled()
+        speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
 
         if degree > 180:
             degree = -360 + degree
@@ -283,9 +302,7 @@ class Robot:
         turn = 32
         yaw_angle = self.motion_sensor.get_yaw_angle()
         while True:
-            if distance < 0 and self.distance_travelled() < distance:
-                break
-            if distance > 0 and self.distance_travelled() > distance:
+            if abs(speed_manager.distance_travelled()) > abs(distance):
                 break
             yaw_angle = self.motion_sensor.get_yaw_angle()
             if yaw_angle >= 0:
@@ -317,6 +334,9 @@ class Robot:
             elif turn_ < -100:
                 turn_ = -100
 
+            speed = speed_manager.speed()
+            if distance < 0:
+                speed *= -1
             self.wheels.start(steering=round(turn_ / 4), speed=speed)
             wait_for_seconds(0.025)
             dif_p = turn
@@ -329,13 +349,16 @@ def test1():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    # Drop off sled
     robot.turn_to_direction(16)
     robot.drive_in_direction(16, 54, speed)
     robot.drive_in_direction(16, -15, -1 * speed)
+
+    # Drive around
     robot.turn_to_direction(-20)
     robot.drive_in_direction(-20, 45, speed)
     robot.turn_to_direction(40)
-    robot.drive_in_direction(40, 50, speed)
+    robot.drive_in_direction(40, 48, speed)
     robot.turn_to_direction(130)
     robot.drive_in_direction(130, 45, speed)
 
@@ -363,6 +386,10 @@ def test1():
             robot.left_wheel.start(15)
         robot.right_wheel.start(round(angle_diff * 2))
     robot.wheels.stop()
+
+    # go home
+    robot.drive_in_direction(-135, 200, speed)
+    return
 
     robot.drive_in_direction(220, 5, speed)
     robot.turn_to_direction(190)
@@ -396,12 +423,11 @@ def test2():
 
     robot.drive_in_direction(0, 63, speed)
     robot.turn_to_direction(-40)
-    robot.drive_in_direction(-40, 29, speed)
+    robot.drive_in_direction(-40, 27, speed)
     robot.turn_to_direction(-85)
     robot.drive_in_direction(-85, -5, -1 * speed)
     robot.lift.run_for_rotations(1, speed=100)
-    robot.drive_in_direction(-85, 15, speed)
-    # robot.drive_in_direction(-85, -0.5, -1*speed)
+    robot.drive_in_direction(-85, 12, speed)
 
     robot.lift.run_for_rotations(-4.1, speed=100)
     robot.lift.run_for_rotations(0.7, speed=100)
@@ -420,7 +446,7 @@ def test2():
     while robot.right_color_sensor.get_color() != "black":
         pass
     robot.turn_to_direction(40)
-    robot.drive_in_direction(40, 15, speed)
+    robot.drive_in_direction(40, 12, speed)
     robot.wheels.start(steering=0, speed=20)
     while robot.right_color_sensor.get_color() != "black":
         pass
@@ -440,7 +466,7 @@ def test2():
     robot.drive_in_direction(38, 5, speed)
 
     robot.turn_to_direction(-40)
-    # robot.drive_in_direction(-40, 2, speed)
+    robot.drive_in_direction(-40, 1, speed)
     robot.lift.run_for_rotations(2.5, speed=100)
 
     robot.turn_to_direction(-60)
@@ -459,16 +485,19 @@ def test3():
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
 
+    robot.drive_in_direction(0, 10, speed=50)
     robot.turn_to_direction(-15)
     robot.drive_in_direction(-15, 70, speed=50)
-    robot.turn_to_direction(11)
-    robot.drive_in_direction(11, 34, speed=50)
+    robot.turn_to_direction(16)
+    robot.drive_in_direction(16, 20, speed=50)
+    robot.wheels.move(10, speed=60)
+    robot.drive_in_direction(16, -2, speed=-50)
     robot.turn_to_direction(-30)
-    robot.drive_in_direction(-30, -25, speed=-30)
+    robot.drive_in_direction(-30, -29, speed=-30)
     robot.turn_to_direction(0)
-    robot.wheels.move(15, steering=-20, speed=-40)
-    robot.drive_in_direction(15, -70, speed=-30)
-    robot.turn_to_direction(45)
+    robot.wheels.move(20, steering=-20, speed=-40)
+    robot.turn_to_direction(10)
+    robot.drive_in_direction(10, -60, speed=-30)
 
 
 def test4():
@@ -494,7 +523,7 @@ def test5():
     robot.drive_in_direction(10, 12, speed)
     robot.lift.run_for_rotations(-0.5, speed=100)
     robot.lift.run_for_rotations(0.5, speed=100)
-    robot.drive_in_direction(10, -20, -1 * speed)
+    robot.drive_in_direction(10, -23, -1 * speed)
 
     # robot.drive_in_direction(0, 25, speed)
     # robot.turn_to_direction(10)
@@ -517,6 +546,4 @@ def test6():
         robot.small_lift.run_for_rotations(0.01, speed=1)
 
 
-test1()
-# robot=Robot()
-# robot.motion_sensor.reset_yaw_angle()
+test6()
