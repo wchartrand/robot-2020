@@ -78,7 +78,6 @@ class SpeedManager:
         )
 
         speed = min(max_speed_from_start, max_speed_from_end)
-        print("speed={}".format(speed))
         return speed
 
 
@@ -181,7 +180,9 @@ class Robot:
 
         motor_p.stop()
 
-    def turn_to_direction(self, degree):
+    def turn_to_direction(self, degree, stop_when_done=True):
+        min_speed = 10
+        max_speed = 50
         while abs(self.motion_sensor.get_yaw_angle() % 360 - degree % 360) > 1:
             T = self.motion_sensor.get_yaw_angle() - degree
             T = T % 360
@@ -189,8 +190,12 @@ class Robot:
                 steering = -100
             else:
                 steering = 100
-            self.wheels.start(steering=steering, speed=10)
-        self.wheels.stop()
+            speed = abs(T)
+            speed = min(speed, max_speed)
+            speed = max(speed, min_speed)
+            self.wheels.start(steering=steering, speed=speed)
+        if stop_when_done:
+            self.wheels.stop()
 
     def pid_turn_to_direction(self, degree):
         if degree > 180:
@@ -241,10 +246,31 @@ class Robot:
             dif_p = turn
         self.wheels.stop()
 
-    def drive_in_direction(self, direction, distance, speed):
-        self.pid_drive_in_direction(direction, distance, speed)
-        # self.drive_in_direction_with_acceleration(direction, distance)
-        return
+    def drive_in_direction(
+        self,
+        direction,
+        distance,
+        speed=None,
+        use_pid=True,
+        accelerate=True,
+        stop_when_done=True,
+    ):
+        if use_pid:
+            self.pid_drive_in_direction(
+                direction,
+                distance,
+                speed=speed,
+                accelerate=accelerate,
+                stop_when_done=stop_when_done,
+            )
+            return
+
+        if accelerate:
+            self.drive_in_direction_with_acceleration(
+                direction, distance, stop_when_done=stop_when_done
+            )
+            return
+
         self.reset_distance_travelled()
         while True:
             if distance < 0 and self.distance_travelled() < distance:
@@ -260,9 +286,12 @@ class Robot:
             if speed < 0:
                 steering = -1 * steering
             self.wheels.start(steering=steering * 3, speed=speed)
-        self.wheels.stop()
+        if stop_when_done:
+            self.wheels.stop()
 
-    def drive_in_direction_with_acceleration(self, direction, distance):
+    def drive_in_direction_with_acceleration(
+        self, direction, distance, stop_when_done=True
+    ):
         speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
         while True:
             if distance < 0 and self.distance_travelled() < distance:
@@ -282,12 +311,24 @@ class Robot:
                 speed = -1 * speed
 
             self.wheels.start(steering=steering * 3, speed=speed)
-        self.wheels.stop()
+        if stop_when_done:
+            self.wheels.stop()
 
-    def pid_drive_in_direction(self, degree, distance, speed):
-        # self.pid_turn_to_direction(degree)
-        # self.reset_distance_travelled()
-        speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
+    def pid_drive_in_direction(
+        self, degree, distance, speed, accelerate=True, stop_when_done=True
+    ):
+        speed_manager = None
+        if accelerate:
+            speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
+        else:
+            self.reset_distance_travelled()
+
+        speed = lambda: speed_manager.speed() if accelerate else speed
+        distance_travelled = (
+            lambda: speed_manager.distance_travelled()
+            if accelerate
+            else self.distance_travelled()
+        )
 
         if degree > 180:
             degree = -360 + degree
@@ -302,7 +343,7 @@ class Robot:
         turn = 32
         yaw_angle = self.motion_sensor.get_yaw_angle()
         while True:
-            if abs(speed_manager.distance_travelled()) > abs(distance):
+            if abs(distance_travelled()) > abs(distance):
                 break
             yaw_angle = self.motion_sensor.get_yaw_angle()
             if yaw_angle >= 0:
@@ -326,7 +367,6 @@ class Robot:
 
             pid_i = i * (pid_i + (turn * t))
             pid_d = ((turn - dif_p) / t) * d
-            # print(turn, pid_i,pid_d)
 
             turn_ = turn + pid_i + pid_d
             if turn_ > 100:
@@ -337,11 +377,12 @@ class Robot:
             speed = speed_manager.speed()
             if distance < 0:
                 speed *= -1
-            self.wheels.start(steering=round(turn_ / 4), speed=speed)
+            self.wheels.start(steering=round(turn_ / 4), speed=speed())
             wait_for_seconds(0.025)
             dif_p = turn
 
-        self.wheels.stop()
+        if stop_when_done:
+            self.wheels.stop()
 
 
 def test1():
@@ -414,7 +455,7 @@ def test1():
     robot.drive_in_direction(-120, 50, speed)
 
 
-def test2():
+def run1():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
@@ -480,7 +521,7 @@ def test2():
     robot.drive_in_direction(223, 215, 30)
 
 
-def test3():
+def run2():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
@@ -500,20 +541,7 @@ def test3():
     robot.drive_in_direction(10, -60, speed=-30)
 
 
-def test4():
-    robot = Robot()
-    robot.motion_sensor.reset_yaw_angle()
-    speed = 30
-
-    robot.drive_in_direction(0, 5, speed)
-
-    robot.lift.run_for_rotations(-4.1, speed=100)
-    robot.lift.run_for_rotations(0.7, speed=100)
-
-    robot.drive_in_direction(0, -5, -1 * speed)
-
-
-def test5():
+def run3():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
@@ -525,12 +553,8 @@ def test5():
     robot.lift.run_for_rotations(0.5, speed=100)
     robot.drive_in_direction(10, -23, -1 * speed)
 
-    # robot.drive_in_direction(0, 25, speed)
-    # robot.turn_to_direction(10)
-    # robot.drive_in_direction(10, 25, speed)
 
-
-def test6():
+def run4():
     robot = Robot()
     robot.motion_sensor.reset_yaw_angle()
     speed = 30
@@ -546,4 +570,4 @@ def test6():
         robot.small_lift.run_for_rotations(0.01, speed=1)
 
 
-test6()
+run1()
