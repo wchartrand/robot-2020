@@ -181,8 +181,6 @@ class Robot:
         motor_p.stop()
 
     def turn_to_direction(self, degree, stop_when_done=True):
-        min_speed = 10
-        max_speed = 50
         while abs(self.motion_sensor.get_yaw_angle() % 360 - degree % 360) > 1:
             T = self.motion_sensor.get_yaw_angle() - degree
             T = T % 360
@@ -190,10 +188,7 @@ class Robot:
                 steering = -100
             else:
                 steering = 100
-            speed = abs(T)
-            speed = min(speed, max_speed)
-            speed = max(speed, min_speed)
-            self.wheels.start(steering=steering, speed=speed)
+            self.wheels.start(steering=steering, speed=10)
         if stop_when_done:
             self.wheels.stop()
 
@@ -250,7 +245,7 @@ class Robot:
         self,
         direction,
         distance,
-        speed=None,
+        speed=0,
         use_pid=True,
         accelerate=True,
         stop_when_done=True,
@@ -318,14 +313,14 @@ class Robot:
         self, degree, distance, speed, accelerate=True, stop_when_done=True
     ):
         speed_manager = None
-        accelerate = accelerate and distance > 22
+        accelerate = accelerate and abs(distance) > 22
         if accelerate:
             speed_manager = SpeedManager(self.left_wheel, self.right_wheel, distance)
         else:
             self.reset_distance_travelled()
 
-        speed = lambda: speed_manager.speed() if accelerate else speed
-        distance_travelled = (
+        get_speed = lambda: speed_manager.speed() if accelerate else abs(speed)
+        get_distance_travelled = (
             lambda: speed_manager.distance_travelled()
             if accelerate
             else self.distance_travelled()
@@ -344,7 +339,7 @@ class Robot:
         turn = 32
         yaw_angle = self.motion_sensor.get_yaw_angle()
         while True:
-            if abs(distance_travelled()) > abs(distance):
+            if abs(get_distance_travelled()) > abs(distance):
                 break
             yaw_angle = self.motion_sensor.get_yaw_angle()
             if yaw_angle >= 0:
@@ -375,10 +370,10 @@ class Robot:
             elif turn_ < -100:
                 turn_ = -100
 
-            speed = speed_manager.speed()
+            speed = get_speed()
             if distance < 0:
                 speed *= -1
-            self.wheels.start(steering=round(turn_ / 4), speed=speed())
+            self.wheels.start(steering=round(turn_ / 4), speed=speed)
             wait_for_seconds(0.025)
             dif_p = turn
 
@@ -464,7 +459,7 @@ def run1():
     # Basketball
     robot.lift.run_for_rotations(-1, speed=100)
 
-    robot.drive_in_direction(0, 63, speed)
+    robot.drive_in_direction(0, 63, speed, accelerate=True)
     robot.turn_to_direction(-40)
     robot.drive_in_direction(-40, 27, speed)
     robot.turn_to_direction(-85)
@@ -496,20 +491,21 @@ def run1():
     while robot.right_color_sensor.get_color() != "black":
         pass
     robot.wheels.stop()
-    robot.turn_to_direction(27)
-    robot.drive_in_direction(27, 10, speed)
+    robot.turn_to_direction(28)
+    robot.drive_in_direction(28, 10, speed)
     robot.lift.run_for_rotations(-0.5, speed=30)
-    robot.drive_in_direction(25, -12, -1 * speed)
+    robot.lift.run_for_rotations(0.5, speed=30)
+    robot.drive_in_direction(28, -14, -1 * speed)
 
     # Weight machine
-    robot.lift.run_for_rotations(-2, speed=100)
-    robot.turn_to_direction(38)
-    robot.drive_in_direction(38, 45, speed)
+    robot.lift.run_for_rotations(-2.5, speed=100)
+    robot.turn_to_direction(42)
+    robot.drive_in_direction(42, 45, speed)
     robot.wheels.start(steering=0, speed=speed)
     while robot.left_color_sensor.get_reflected_light() > 20:
         pass
     robot.wheels.stop()
-    robot.drive_in_direction(38, 5, speed)
+    robot.drive_in_direction(42, 5, speed)
 
     robot.turn_to_direction(-40)
     robot.drive_in_direction(-40, 1, speed)
@@ -519,14 +515,22 @@ def run1():
     robot.turn_to_direction(-60)
     robot.drive_in_direction(-60, -10, -30)
     robot.turn_to_direction(110)
+    robot.drive_in_direction(110, 9, 30)
+
+    robot.wheels.move(5, steering=-100, speed=5)
+    robot.wheels.move(2, steering=100, speed=5)
+    # robot.wheels.move(-1, speed=30)
     robot.lift.run_for_rotations(0.5, speed=100)
-    robot.drive_in_direction(110, 11, 30)
-    robot.turn_to_direction(155)
-    robot.drive_in_direction(155, -10, -30)
+
+    robot.turn_to_direction(156)
+    robot.drive_in_direction(156, -10, -30)
 
     # Return home
-    robot.turn_to_direction(223)
-    robot.drive_in_direction(223, 215, 30)
+    robot.turn_to_direction(221)
+    robot.drive_in_direction(221, 130, 30)
+    robot.turn_to_direction(-110)
+    robot.lift.run_for_rotations(-0.41, speed=100)
+    robot.drive_in_direction(-110, 75, 30)
 
 
 def run2():
@@ -540,16 +544,18 @@ def run2():
     robot.drive_in_direction(-15, 70, speed=50)
     robot.turn_to_direction(16)
     robot.drive_in_direction(16, 20, speed=50)
-    robot.wheels.move(10, speed=60)
+    robot.wheels.move(10, speed=50)
     robot.drive_in_direction(16, -2, speed=-50)
     robot.turn_to_direction(-30)
     robot.drive_in_direction(-30, -29, speed=-30)
 
     # Slide
     robot.turn_to_direction(0)
-    robot.wheels.move(20, steering=-20, speed=-40)
-    robot.turn_to_direction(10)
-    robot.drive_in_direction(10, -60, speed=-30)
+    robot.wheels.move(25, steering=-20, speed=-40)
+    robot.turn_to_direction(20)
+    robot.drive_in_direction(20, -60, speed=-30)
+
+    robot.lift.run_for_rotations(0.38, speed=100)
 
 
 def run3():
@@ -565,6 +571,8 @@ def run3():
     robot.lift.run_for_rotations(0.5, speed=100)
     robot.drive_in_direction(10, -23, -1 * speed)
 
+    robot.lift.run_for_rotations(-2, speed=100)
+
 
 def run4():
     robot = Robot()
@@ -572,7 +580,8 @@ def run4():
     speed = 30
 
     # Step counter
-    robot.drive_in_direction(0, 110, speed)
+    robot.drive_in_direction(0, 100, speed)
+    robot.drive_in_direction(0, 15, speed)
 
     # Pull up bar
     robot.drive_in_direction(0, -10, -1 * speed)
@@ -585,4 +594,190 @@ def run4():
         robot.small_lift.run_for_rotations(0.01, speed=1)
 
 
-run1()
+def run1a():
+    robot = Robot()
+    robot.motion_sensor.reset_yaw_angle()
+    speed = 30
+
+    # Basketball
+    robot.lift.run_for_rotations(-1, speed=100)
+
+    robot.drive_in_direction(0, 63, speed, accelerate=True)
+    robot.turn_to_direction(-40)
+    robot.drive_in_direction(-40, 27, speed)
+    robot.turn_to_direction(-85)
+    robot.drive_in_direction(-85, -5, -1 * speed)
+    robot.lift.run_for_rotations(1, speed=100)
+    robot.drive_in_direction(-85, 12, speed)
+
+    robot.lift.run_for_rotations(-4.1, speed=100)
+    robot.lift.run_for_rotations(0.7, speed=100)
+
+    robot.drive_in_direction(-85, -8, -1 * speed)
+
+    # Bocce part 1
+    robot.lift.run_for_rotations(2, speed=100)
+    robot.turn_to_direction(-35)
+    robot.drive_in_direction(-35, 3, speed)
+    robot.lift.run_for_rotations(-2, speed=100)
+
+    robot.turn_to_direction(65)
+    robot.lift.run_for_rotations(3, speed=100)
+
+    # Bocce 2
+    robot.wheels.start(steering=0, speed=speed)
+    while robot.right_color_sensor.get_color() != "black":
+        pass
+    robot.turn_to_direction(45)
+    robot.drive_in_direction(45, 12, speed)
+    robot.wheels.start(steering=0, speed=20)
+    while robot.right_color_sensor.get_color() != "black":
+        pass
+    robot.wheels.stop()
+    robot.turn_to_direction(25)
+    robot.drive_in_direction(25, 10, speed)
+    robot.lift.run_for_rotations(-0.5, speed=30)
+    robot.lift.run_for_rotations(0.5, speed=30)
+    robot.drive_in_direction(25, -7, -1 * speed)
+
+    # Weight machine
+    robot.lift.run_for_rotations(-2.5, speed=100)
+    robot.turn_to_direction(45)
+    robot.drive_in_direction(45, 45, speed)
+    robot.wheels.start(steering=0, speed=speed)
+    while robot.left_color_sensor.get_reflected_light() > 20:
+        pass
+    robot.wheels.stop()
+    robot.drive_in_direction(45, 5, speed)
+
+    robot.turn_to_direction(-40)
+    robot.drive_in_direction(-40, 1, speed)
+    robot.lift.run_for_rotations(2.5, speed=100)
+
+    # Rowing machine
+    robot.turn_to_direction(-60)
+    robot.drive_in_direction(-60, -10, -30)
+    robot.turn_to_direction(110)
+    robot.drive_in_direction(110, 8, 30)
+
+    robot.wheels.move(5, steering=-100, speed=5)
+    robot.wheels.move(2, steering=100, speed=5)
+    robot.lift.run_for_rotations(0.5, speed=100)
+
+    robot.turn_to_direction(156)
+    robot.drive_in_direction(156, -10, -30)
+
+    # Return home
+    robot.turn_to_direction(221)
+    robot.drive_in_direction(221, 130, 30)
+    robot.turn_to_direction(-110)
+    robot.lift.run_for_rotations(-0.41, speed=100)
+    robot.drive_in_direction(-110, 75, 30)
+
+
+def run1b():
+    robot = Robot()
+    robot.motion_sensor.reset_yaw_angle()
+    speed = 30
+
+    # Basketball
+    robot.lift.run_for_rotations(-1, speed=100)
+
+    robot.drive_in_direction(0, 63, speed, accelerate=True)
+    robot.turn_to_direction(-40)
+    robot.drive_in_direction(-40, 27, speed)
+    robot.turn_to_direction(-85)
+    robot.drive_in_direction(-85, -5, -1 * speed)
+    robot.lift.run_for_rotations(1, speed=100)
+    robot.drive_in_direction(-85, 12, speed)
+
+    robot.lift.run_for_rotations(-4.1, speed=100)
+    robot.lift.run_for_rotations(0.7, speed=100)
+
+    robot.drive_in_direction(-85, -8, -1 * speed)
+
+    # Bocce part 1
+    robot.lift.run_for_rotations(2, speed=100)
+    robot.turn_to_direction(-35)
+    robot.drive_in_direction(-35, 3, speed)
+    robot.lift.run_for_rotations(-2, speed=100)
+
+    robot.turn_to_direction(65)
+    robot.lift.run_for_rotations(3, speed=100)
+
+    # Bocce 2
+    robot.wheels.start(steering=0, speed=speed)
+    while robot.right_color_sensor.get_color() != "black":
+        pass
+    robot.turn_to_direction(40)
+    robot.drive_in_direction(40, 12, speed)
+    robot.wheels.start(steering=0, speed=20)
+    while robot.right_color_sensor.get_color() != "black":
+        pass
+    robot.wheels.stop()
+    robot.turn_to_direction(28)
+    robot.drive_in_direction(28, 10, speed)
+    robot.lift.run_for_rotations(-0.5, speed=30)
+    robot.lift.run_for_rotations(0.5, speed=30)
+    robot.drive_in_direction(28, -14, -1 * speed)
+
+    # Weight machine
+    robot.lift.run_for_rotations(-2.5, speed=100)
+    robot.turn_to_direction(42)
+    robot.drive_in_direction(42, 45, speed)
+    robot.wheels.start(steering=0, speed=speed)
+    while (
+        robot.left_color_sensor.get_reflected_light() > 20
+        and robot.right_color_sensor.get_reflected_light() > 20
+    ):
+        pass
+    while (
+        abs(
+            robot.left_color_sensor.get_reflected_light()
+            - robot.right_color_sensor.get_reflected_light()
+        )
+        > 1
+    ):
+        if robot.left_color_sensor.get_reflected_light() > 55:
+            robot.left_wheel.start(-10)
+        elif robot.left_color_sensor.get_reflected_light() < 55:
+            robot.left_wheel.start(10)
+        else:
+            robot.left_wheel.stop()
+        if robot.right_color_sensor.get_reflected_light() > 55:
+            robot.left_wheel.start(10)
+        elif robot.right_color_sensor.get_reflected_light() < 55:
+            robot.left_wheel.start(-10)
+        else:
+            robot.right_wheel.stop()
+    robot.wheels.stop()
+    robot.motion_sensor.reset_yaw_angle()
+    robot.drive_in_direction(0, 5, speed)
+
+    robot.turn_to_direction(-90)
+    robot.drive_in_direction(-90, 1, speed)
+    robot.lift.run_for_rotations(2.5, speed=100)
+
+    # Rowing machine
+    robot.turn_to_direction(-100)
+    robot.drive_in_direction(-100, -10, -30)
+    robot.turn_to_direction(155)
+    robot.drive_in_direction(155, 9, 30)
+
+    robot.wheels.move(5, steering=-100, speed=5)
+    robot.wheels.move(2, steering=100, speed=5)
+    # robot.wheels.move(-1, speed=30)
+    robot.lift.run_for_rotations(0.5, speed=100)
+
+    robot.turn_to_direction(190)
+    robot.drive_in_direction(190, -10, -30)
+
+    # Return home
+    # robot.turn_to_direction(221)
+    # robot.drive_in_direction(221, 130, 30)
+    # robot.turn_to_direction(-110)
+    # robot.lift.run_for_rotations(-0.41, speed=100)
+    # robot.drive_in_direction(-110, 75, 30)
+
+
+run1b()
