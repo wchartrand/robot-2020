@@ -728,7 +728,7 @@ def run1b():
     robot.wheels.start(steering=0, speed=speed)
     while (
         robot.left_color_sensor.get_reflected_light() > 20
-        and robot.right_color_sensor.get_reflected_light() > 20
+        or robot.right_color_sensor.get_reflected_light() > 20
     ):
         pass
     while (
@@ -780,4 +780,31 @@ def run1b():
     # robot.drive_in_direction(-110, 75, 30)
 
 
-run1b()
+# run1b()
+
+robot = Robot()
+robot.motion_sensor.reset_yaw_angle()
+speed = 30
+while (
+    robot.left_color_sensor.get_reflected_light() > 20
+    or robot.right_color_sensor.get_reflected_light() > 20
+):
+    pass
+while True:
+    l = robot.left_color_sensor.get_reflected_light()
+    r = robot.right_color_sensor.get_reflected_light()
+    if abs(l - r) <= 1:
+        break
+    print("left:{}, right:{}", robot)
+    if l > 55:
+        robot.left_wheel.start(-10)
+    elif l < 55:
+        robot.left_wheel.start(10)
+    else:
+        robot.left_wheel.stop()
+    if r > 55:
+        robot.right_wheel.start(10)
+    elif r < 55:
+        robot.right_wheel.start(-10)
+    else:
+        robot.right_wheel.stop()
